@@ -8,14 +8,12 @@ const supabase = createClient(
 
 export default function Dashboard() {
   const [registros, setRegistros] = useState([]);
+  const [puntuacion, setPuntuacion] = useState("");
+  const [sportType, setSportType] = useState("");
+  const [day, setDay] = useState("");
+  const [time, setTime] = useState("");
+  const [distance, setDistance] = useState("");
   const [user, setUser] = useState(null);
-  const [newRegistro, setNewRegistro] = useState({
-    sport_type: "",
-    day: "",
-    time: "",
-    distance: "",
-    puntuacion: "",
-  });
 
   useEffect(() => {
     async function fetchUser() {
@@ -29,36 +27,48 @@ export default function Dashboard() {
   async function fetchRegistros() {
     const { data, error } = await supabase
       .from("registros")
-      .select("id, sport_type, day, time, distance, puntuacion, user_id, users:auth.users(email)");
+      .select("id, sport_type, day, time, distance, puntuacion, user_id, users:auth.users(email)")
+      .order("day", { ascending: false });
 
     if (error) {
       console.error("Error al obtener registros:", error);
     } else {
-      console.log("Registros obtenidos:", data); // Verificar si trae los emails
-      setRegistros(data);
+      console.log("Registros obtenidos:", data); // Verifica los datos en consola
+      setRegistros(
+        data.map((registro) => ({
+          ...registro,
+          email: registro.users?.email || "Desconocido", // Asegura que el email se muestre correctamente
+        }))
+      );
     }
   }
 
   async function addRegistro() {
     if (!user) return alert("Debes estar autenticado");
 
+    const newRegistro = {
+      user_id: user.id,
+      sport_type: sportType,
+      day,
+      time,
+      distance,
+      puntuacion: parseInt(puntuacion),
+    };
+
     const { data, error } = await supabase
       .from("registros")
-      .insert([{ 
-        user_id: user.id, 
-        sport_type: newRegistro.sport_type,
-        day: newRegistro.day,
-        time: newRegistro.time,
-        distance: newRegistro.distance,
-        puntuacion: parseInt(newRegistro.puntuacion) 
-      }])
+      .insert([newRegistro])
       .select();
 
     if (error) {
       console.error("Error al añadir registro:", error);
     } else {
-      setRegistros([...registros, ...data]); // Agregar nuevo registro sin perder los anteriores
-      setNewRegistro({ sport_type: "", day: "", time: "", distance: "", puntuacion: "" });
+      setRegistros([...registros, { ...newRegistro, email: user.email }]);
+      setPuntuacion("");
+      setSportType("");
+      setDay("");
+      setTime("");
+      setDistance("");
     }
   }
 
@@ -71,45 +81,45 @@ export default function Dashboard() {
 
         {/* Formulario para añadir registros */}
         <div className="mt-6 text-center">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Registros</h2>
-          <div className="flex flex-col gap-2">
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Registro</h2>
+          <div className="grid grid-cols-2 gap-2">
             <input
               type="text"
-              value={newRegistro.sport_type}
-              onChange={(e) => setNewRegistro({ ...newRegistro, sport_type: e.target.value })}
-              placeholder="Tipo de deporte (correr, nadar, caminar)"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+              value={sportType}
+              onChange={(e) => setSportType(e.target.value)}
+              placeholder="Tipo de deporte (Correr, Nadar...)"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <input
               type="date"
-              value={newRegistro.day}
-              onChange={(e) => setNewRegistro({ ...newRegistro, day: e.target.value })}
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <input
               type="text"
-              value={newRegistro.time}
-              onChange={(e) => setNewRegistro({ ...newRegistro, time: e.target.value })}
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
               placeholder="Tiempo (min:seg)"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <input
               type="text"
-              value={newRegistro.distance}
-              onChange={(e) => setNewRegistro({ ...newRegistro, distance: e.target.value })}
+              value={distance}
+              onChange={(e) => setDistance(e.target.value)}
               placeholder="Distancia (km/m)"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <input
               type="number"
-              value={newRegistro.puntuacion}
-              onChange={(e) => setNewRegistro({ ...newRegistro, puntuacion: e.target.value })}
+              value={puntuacion}
+              onChange={(e) => setPuntuacion(e.target.value)}
               placeholder="Puntuación"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <button
               onClick={addRegistro}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 w-full"
             >
               Añadir a la lista
             </button>
@@ -132,10 +142,8 @@ export default function Dashboard() {
             <tbody>
               {registros.map((registro) => (
                 <tr key={registro.id} className="hover:bg-gray-100">
-                  <td className="border border-gray-300 px-4 py-2">
-                    {registro.users ? registro.users.email : "Desconocido"}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">{registro.sport_type}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.email || "Desconocido"}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.sport_type || "N/A"}</td>
                   <td className="border border-gray-300 px-4 py-2">{registro.day}</td>
                   <td className="border border-gray-300 px-4 py-2">{registro.time}</td>
                   <td className="border border-gray-300 px-4 py-2">{registro.distance}</td>
@@ -145,7 +153,6 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   );
