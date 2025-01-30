@@ -16,12 +16,12 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    async function fetchUser() {
+    async function fetchUserAndRegistros() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      fetchRegistros();
+      await fetchRegistros(); // Asegura que se carguen todos los registros al inicio
     }
-    fetchUser();
+    fetchUserAndRegistros();
   }, []);
 
   async function fetchRegistros() {
@@ -37,7 +37,7 @@ export default function Dashboard() {
       setRegistros(
         data.map((registro) => ({
           ...registro,
-          email: registro.users?.email || "Desconocido", // Asegura que el email se muestre correctamente
+          email: registro.users?.email || "Desconocido",
         }))
       );
     }
@@ -55,15 +55,12 @@ export default function Dashboard() {
       puntuacion: parseInt(puntuacion),
     };
 
-    const { data, error } = await supabase
-      .from("registros")
-      .insert([newRegistro])
-      .select();
+    const { error } = await supabase.from("registros").insert([newRegistro]);
 
     if (error) {
       console.error("Error al añadir registro:", error);
     } else {
-      setRegistros([...registros, { ...newRegistro, email: user.email }]);
+      await fetchRegistros(); // Refresca la tabla con los registros actualizados
       setPuntuacion("");
       setSportType("");
       setDay("");
