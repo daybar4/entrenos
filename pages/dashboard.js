@@ -19,7 +19,7 @@ export default function Dashboard() {
     async function fetchUserAndRegistros() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      await fetchRegistros(); // Asegura que se carguen todos los registros al inicio
+      await fetchRegistros(); 
     }
     fetchUserAndRegistros();
   }, []);
@@ -27,19 +27,14 @@ export default function Dashboard() {
   async function fetchRegistros() {
     const { data, error } = await supabase
       .from("registros")
-      .select("id, sport_type, day, time, distance, puntuacion, user_id, users:auth.users(email)")
+      .select("id, sport_type, day, time, distance, puntuacion, email")
       .order("day", { ascending: false });
 
     if (error) {
       console.error("Error al obtener registros:", error);
     } else {
-      console.log("Registros obtenidos:", data); // Verifica los datos en consola
-      setRegistros(
-        data.map((registro) => ({
-          ...registro,
-          email: registro.users?.email || "Desconocido",
-        }))
-      );
+      console.log("Registros obtenidos:", data);
+      setRegistros(data);
     }
   }
 
@@ -48,6 +43,7 @@ export default function Dashboard() {
 
     const newRegistro = {
       user_id: user.id,
+      email: user.email, // Guardamos el email directamente en la tabla de registros
       sport_type: sportType,
       day,
       time,
@@ -60,7 +56,7 @@ export default function Dashboard() {
     if (error) {
       console.error("Error al añadir registro:", error);
     } else {
-      await fetchRegistros(); // Refresca la tabla con los registros actualizados
+      await fetchRegistros(); 
       setPuntuacion("");
       setSportType("");
       setDay("");
@@ -76,7 +72,6 @@ export default function Dashboard() {
           Registros de Todos los Usuarios
         </h1>
 
-        {/* Formulario para añadir registros */}
         <div className="mt-6 text-center">
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Registro</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -123,7 +118,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tabla de Registros */}
         <div className="overflow-x-auto mt-6">
           <table className="w-full border-collapse border border-gray-300 rounded-lg shadow">
             <thead>
