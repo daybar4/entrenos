@@ -24,46 +24,44 @@ export default function Dashboard() {
     fetchUserAndRegistros();
   }, []);
 
-  async function fetchRegistros() {
-    const { data, error } = await supabase
-      .from("registros")
-      .select("id, sport_type, day, time, distance, puntuacion, email")
-      .order("day", { ascending: false });
+async function fetchRegistros() {
+  const { data, error } = await supabase
+    .from("registros")
+    .select("id, sport_type, day, time, distance, puntuacion, user_id, auth_users:auth.users(email)")
+    .order("day", { ascending: false });
 
-    if (error) {
-      console.error("Error al obtener registros:", error);
-    } else {
-      console.log("Registros obtenidos:", data);
-      setRegistros(data);
-    }
+  if (error) {
+    console.error("Error obteniendo registros:", error);
+  } else {
+    console.log("Registros obtenidos:", data); // Verifica si llegan registros
+    setRegistros(data);
   }
+}
 
-  async function addRegistro() {
-    if (!user) return alert("Debes estar autenticado");
+async function addRegistro() {
+  if (!user) return alert("Debes estar autenticado");
 
-    const newRegistro = {
-      user_id: user.id,
-      email: user.email, // Guardamos el email directamente en la tabla de registros
-      sport_type: sportType,
-      day,
-      time,
-      distance,
-      puntuacion: parseInt(puntuacion),
-    };
+  const { data, error } = await supabase
+    .from("registros")
+    .insert([
+      {
+        user_id: user.id,
+        sport_type,
+        day,
+        time,
+        distance,
+        puntuacion: parseInt(puntuacion),
+      }
+    ])
+    .select();
 
-    const { error } = await supabase.from("registros").insert([newRegistro]);
-
-    if (error) {
-      console.error("Error al añadir registro:", error);
-    } else {
-      await fetchRegistros(); 
-      setPuntuacion("");
-      setSportType("");
-      setDay("");
-      setTime("");
-      setDistance("");
-    }
+  if (error) {
+    console.error("Error al insertar registro:", error);
+  } else {
+    console.log("Registro insertado:", data); // Verifica si el registro se inserta correctamente
+    setRegistros([...registros, ...data]); // Agrega el nuevo registro a la lista
   }
+}
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
