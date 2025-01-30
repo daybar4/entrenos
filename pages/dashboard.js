@@ -53,27 +53,27 @@ export default function Dashboard() {
   }
 
   // Enviar todos los registros pendientes a Supabase
-  async function enviarRegistros() {
-    if (!user) return alert("Debes estar autenticado");
-    if (registrosPendientes.length === 0) return alert("No hay registros para enviar.");
+async function enviarRegistros() {
+  if (!user) return alert("Debes estar autenticado");
+  if (registrosPendientes.length === 0) return alert("No hay registros para enviar.");
 
-    const nuevosRegistros = registrosPendientes.map(registro => ({
-      user_id: user.id,
-      sport_type: registro.sport_type,
-      day: registro.day,
-      time: registro.time,
-      distance: registro.distance,
-      puntuacion: parseInt(registro.puntuacion),
-    }));
+  const nuevosRegistros = registrosPendientes.map(registro => ({
+    user_id: user.id,
+    sport_type: registro.sport_type,
+    day: registro.day,
+    time: registro.time,
+    distance: registro.distance,
+    puntuacion: parseInt(registro.puntuacion),
+  }));
 
-    const { error } = await supabase.from("registros").insert(nuevosRegistros);
-    
-    if (error) console.error(error);
-    else {
-      setRegistros([...registros, ...nuevosRegistros]); // Actualizar estado con nuevos datos
-      setRegistrosPendientes([]); // Limpiar registros temporales
-    }
+  const { error } = await supabase.from("registros").insert(nuevosRegistros);
+  
+  if (error) console.error(error);
+  else {
+    setRegistrosPendientes([]); // Limpiar registros temporales
+    fetchRegistros(); // 🔥 Vuelve a cargar la lista de registros desde Supabase
   }
+}
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
