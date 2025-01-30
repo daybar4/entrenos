@@ -39,13 +39,18 @@ async function fetchRegistros() {
 }
 
 async function addRegistro() {
-  if (!user) return alert("Debes estar autenticado");
+  if (!user) {
+    alert("Debes estar autenticado");
+    return;
+  }
+
+  console.log("ID del usuario autenticado:", user.id); // Depuración
 
   const { data, error } = await supabase
     .from("registros")
     .insert([
       {
-        user_id: user.id,
+        user_id: user.id, // ID del usuario autenticado
         sport_type,
         day,
         time,
