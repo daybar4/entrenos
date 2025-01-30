@@ -9,7 +9,13 @@ const supabase = createClient(
 
 export default function Dashboard() {
   const [registros, setRegistros] = useState([]);
-  const [nuevoRegistro, setNuevoRegistro] = useState({ puntuacion: "", sport_type: "", time: "", distance: "" });
+  const [nuevoRegistro, setNuevoRegistro] = useState({
+    sport_type: "",
+    day: "",
+    time: "",
+    distance: "",
+    puntuacion: "",
+  });
   const [registrosPendientes, setRegistrosPendientes] = useState([]); // Lista de registros antes de enviarlos
   const [user, setUser] = useState(null);
 
@@ -27,21 +33,23 @@ export default function Dashboard() {
   async function fetchRegistros() {
     const { data, error } = await supabase
       .from("registros")
-      .select("id, puntuacion, sport_type, time, distance, day, user_id, users:auth.users(email)");
+      .select("id, sport_type, day, time, distance, puntuacion, user_id, users:auth.users(email)");
 
     if (error) console.error(error);
     else setRegistros(data);
   }
 
-  // Añadir un registro temporal a la lista antes de enviarlo a la base de datos
+  // Añadir un registro temporal antes de enviarlo a la base de datos
   function agregarRegistroTemporal() {
-    if (!nuevoRegistro.puntuacion || !nuevoRegistro.sport_type || !nuevoRegistro.time || !nuevoRegistro.distance) {
+    const { sport_type, day, time, distance, puntuacion } = nuevoRegistro;
+    
+    if (!sport_type || !day || !time || !distance || !puntuacion) {
       alert("Todos los campos son obligatorios.");
       return;
     }
 
     setRegistrosPendientes([...registrosPendientes, { ...nuevoRegistro }]);
-    setNuevoRegistro({ puntuacion: "", sport_type: "", time: "", distance: "" }); // Limpiar inputs
+    setNuevoRegistro({ sport_type: "", day: "", time: "", distance: "", puntuacion: "" }); // Limpiar inputs
   }
 
   // Enviar todos los registros pendientes a Supabase
@@ -51,11 +59,11 @@ export default function Dashboard() {
 
     const nuevosRegistros = registrosPendientes.map(registro => ({
       user_id: user.id,
-      puntuacion: parseInt(registro.puntuacion),
       sport_type: registro.sport_type,
+      day: registro.day,
       time: registro.time,
       distance: registro.distance,
-      day: new Date().toISOString().split("T")[0] // Guardar fecha actual
+      puntuacion: parseInt(registro.puntuacion),
     }));
 
     const { error } = await supabase.from("registros").insert(nuevosRegistros);
@@ -77,38 +85,45 @@ export default function Dashboard() {
         {/* Formulario para añadir registros */}
         <div className="mb-6 text-center">
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Registros</h2>
-          <div className="flex gap-2 justify-center flex-wrap">
-            <input
-              type="number"
-              value={nuevoRegistro.puntuacion}
-              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, puntuacion: e.target.value })}
-              placeholder="Puntuación"
-              className="border border-gray-300 px-3 py-2 rounded-lg"
-            />
+          <div className="flex flex-col gap-2 justify-center items-center">
             <input
               type="text"
               value={nuevoRegistro.sport_type}
               onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, sport_type: e.target.value })}
               placeholder="Deporte (correr, nadar...)"
-              className="border border-gray-300 px-3 py-2 rounded-lg"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
+            />
+            <input
+              type="date"
+              value={nuevoRegistro.day}
+              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, day: e.target.value })}
+              placeholder="Fecha"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <input
               type="text"
               value={nuevoRegistro.time}
               onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, time: e.target.value })}
               placeholder="Tiempo (min:seg)"
-              className="border border-gray-300 px-3 py-2 rounded-lg"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <input
               type="text"
               value={nuevoRegistro.distance}
               onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, distance: e.target.value })}
               placeholder="Distancia (km/m)"
-              className="border border-gray-300 px-3 py-2 rounded-lg"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
+            />
+            <input
+              type="number"
+              value={nuevoRegistro.puntuacion}
+              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, puntuacion: e.target.value })}
+              placeholder="Puntuación"
+              className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             />
             <button
               onClick={agregarRegistroTemporal}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300"
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300 w-full"
             >
               Añadir a la lista
             </button>
@@ -122,7 +137,7 @@ export default function Dashboard() {
             <ul className="list-disc pl-5 text-gray-700">
               {registrosPendientes.map((registro, index) => (
                 <li key={index}>
-                  {registro.sport_type} - {registro.puntuacion} puntos, {registro.time}, {registro.distance}
+                  {registro.sport_type} - {registro.day} - {registro.time} - {registro.distance} - {registro.puntuacion} puntos
                 </li>
               ))}
             </ul>
