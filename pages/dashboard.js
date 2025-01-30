@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
+// Configurar conexión con Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -9,11 +10,10 @@ const supabase = createClient(
 export default function Dashboard() {
   const [registros, setRegistros] = useState([]);
   const [puntuacion, setPuntuacion] = useState("");
-  const [day, setDay] = useState("");
-  const [time, setTime] = useState("");
-  const [distance, setDistance] = useState("");
+  const [deporte, setDeporte] = useState(""); // Nuevo estado para el tipo de deporte
   const [user, setUser] = useState(null);
 
+  // Cargar usuario y registros al montar el componente
   useEffect(() => {
     async function fetchUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -23,15 +23,17 @@ export default function Dashboard() {
     fetchUser();
   }, []);
 
+  // Obtener los registros con la relación a usuarios
   async function fetchRegistros() {
     const { data, error } = await supabase
       .from("registros")
-      .select("id, puntuacion, day, time, distance, user_id, users(email)");
+      .select("id, puntuacion, day, time, distance, sport_type, user_id, users:auth.users(email)");
 
     if (error) console.error(error);
     else setRegistros(data);
   }
 
+  // Añadir un nuevo registro
   async function addRegistro() {
     if (!user) return alert("Debes estar autenticado");
 
@@ -39,10 +41,9 @@ export default function Dashboard() {
       .from("registros")
       .insert([{ 
         user_id: user.id, 
-        day, 
-        time, 
-        distance, 
-        puntuacion: parseInt(puntuacion) 
+        puntuacion: parseInt(puntuacion),
+        sport_type: deporte, // Guardar el tipo de deporte
+        day: new Date().toISOString().split("T")[0] // Guardar la fecha actual
       }])
       .select();
 
@@ -50,27 +51,35 @@ export default function Dashboard() {
     else {
       setRegistros([...registros, data[0]]);
       setPuntuacion("");
-      setDay("");
-      setTime("");
-      setDistance("");
+      setDeporte("");
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white shadow-lg rounded-xl p-6 max-w-2xl w-full">
+      <div className="bg-white shadow-lg rounded-xl p-6 max-w-3xl w-full">
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-4">
           Registros de Todos los Usuarios
         </h1>
 
         {/* Formulario para añadir registros */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2 text-center">Añadir Puntuación</h2>
-          <div className="flex flex-col gap-3">
-            <input type="date" value={day} onChange={(e) => setDay(e.target.value)} className="border border-gray-300 px-3 py-2 rounded-lg" />
-            <input type="text" value={time} onChange={(e) => setTime(e.target.value)} placeholder="Tiempo (ej: 10 min)" className="border border-gray-300 px-3 py-2 rounded-lg" />
-            <input type="text" value={distance} onChange={(e) => setDistance(e.target.value)} placeholder="Distancia (ej: 5 km)" className="border border-gray-300 px-3 py-2 rounded-lg" />
-            <input type="number" value={puntuacion} onChange={(e) => setPuntuacion(e.target.value)} placeholder="Introduce puntuación" className="border border-gray-300 px-3 py-2 rounded-lg" />
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Puntuación</h2>
+          <div className="flex gap-2 justify-center">
+            <input
+              type="number"
+              value={puntuacion}
+              onChange={(e) => setPuntuacion(e.target.value)}
+              placeholder="Introduce puntuación"
+              className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              value={deporte}
+              onChange={(e) => setDeporte(e.target.value)}
+              placeholder="Tipo de deporte (correr, nadar, caminar...)"
+              className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <button
               onClick={addRegistro}
               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
@@ -86,7 +95,8 @@ export default function Dashboard() {
             <thead>
               <tr className="bg-gray-200 text-gray-700">
                 <th className="border border-gray-300 px-4 py-2 text-left">Usuario</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Día</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Deporte</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Fecha</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Tiempo</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Distancia</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Puntuación</th>
@@ -96,7 +106,8 @@ export default function Dashboard() {
               {registros.map((registro) => (
                 <tr key={registro.id} className="hover:bg-gray-100">
                   <td className="border border-gray-300 px-4 py-2">{registro.users?.email || "Desconocido"}</td>
-                  <td className="border border-gray-300 px-4 py-2">{registro.day || "N/A"}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.sport_type || "No especificado"}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.day || "Sin fecha"}</td>
                   <td className="border border-gray-300 px-4 py-2">{registro.time || "N/A"}</td>
                   <td className="border border-gray-300 px-4 py-2">{registro.distance || "N/A"}</td>
                   <td className="border border-gray-300 px-4 py-2 text-center">{registro.puntuacion}</td>
@@ -105,8 +116,8 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
   );
 }
-
