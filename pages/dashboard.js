@@ -9,6 +9,9 @@ const supabase = createClient(
 export default function Dashboard() {
   const [registros, setRegistros] = useState([]);
   const [puntuacion, setPuntuacion] = useState("");
+  const [day, setDay] = useState("");
+  const [time, setTime] = useState("");
+  const [distance, setDistance] = useState("");
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -23,8 +26,7 @@ export default function Dashboard() {
   async function fetchRegistros() {
     const { data, error } = await supabase
       .from("registros")
-      .select("id, puntuacion, user_id, users(email)")
-      .eq("users.id", "user_id");
+      .select("id, puntuacion, day, time, distance, user_id, users(email)");
 
     if (error) console.error(error);
     else setRegistros(data);
@@ -35,13 +37,22 @@ export default function Dashboard() {
 
     const { data, error } = await supabase
       .from("registros")
-      .insert([{ user_id: user.id, puntuacion: parseInt(puntuacion) }])
+      .insert([{ 
+        user_id: user.id, 
+        day, 
+        time, 
+        distance, 
+        puntuacion: parseInt(puntuacion) 
+      }])
       .select();
 
     if (error) console.error(error);
     else {
       setRegistros([...registros, data[0]]);
       setPuntuacion("");
+      setDay("");
+      setTime("");
+      setDistance("");
     }
   }
 
@@ -52,37 +63,14 @@ export default function Dashboard() {
           Registros de Todos los Usuarios
         </h1>
 
-        {/* Tabla de Registros */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300 rounded-lg shadow">
-            <thead>
-              <tr className="bg-gray-200 text-gray-700">
-                <th className="border border-gray-300 px-4 py-2 text-left">Usuario</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Puntuación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registros.map((registro) => (
-                <tr key={registro.id} className="hover:bg-gray-100">
-                  <td className="border border-gray-300 px-4 py-2">{registro.users?.email || "Desconocido"}</td>
-                  <td className="border border-gray-300 px-4 py-2 text-center">{registro.puntuacion}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
         {/* Formulario para añadir registros */}
-        <div className="mt-6 text-center">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Puntuación</h2>
-          <div className="flex gap-2 justify-center">
-            <input
-              type="number"
-              value={puntuacion}
-              onChange={(e) => setPuntuacion(e.target.value)}
-              placeholder="Introduce puntuación"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-700 mb-2 text-center">Añadir Puntuación</h2>
+          <div className="flex flex-col gap-3">
+            <input type="date" value={day} onChange={(e) => setDay(e.target.value)} className="border border-gray-300 px-3 py-2 rounded-lg" />
+            <input type="text" value={time} onChange={(e) => setTime(e.target.value)} placeholder="Tiempo (ej: 10 min)" className="border border-gray-300 px-3 py-2 rounded-lg" />
+            <input type="text" value={distance} onChange={(e) => setDistance(e.target.value)} placeholder="Distancia (ej: 5 km)" className="border border-gray-300 px-3 py-2 rounded-lg" />
+            <input type="number" value={puntuacion} onChange={(e) => setPuntuacion(e.target.value)} placeholder="Introduce puntuación" className="border border-gray-300 px-3 py-2 rounded-lg" />
             <button
               onClick={addRegistro}
               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
@@ -91,7 +79,34 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* Tabla de Registros */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-300 rounded-lg shadow">
+            <thead>
+              <tr className="bg-gray-200 text-gray-700">
+                <th className="border border-gray-300 px-4 py-2 text-left">Usuario</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Día</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Tiempo</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Distancia</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Puntuación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {registros.map((registro) => (
+                <tr key={registro.id} className="hover:bg-gray-100">
+                  <td className="border border-gray-300 px-4 py-2">{registro.users?.email || "Desconocido"}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.day || "N/A"}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.time || "N/A"}</td>
+                  <td className="border border-gray-300 px-4 py-2">{registro.distance || "N/A"}</td>
+                  <td className="border border-gray-300 px-4 py-2 text-center">{registro.puntuacion}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
+
