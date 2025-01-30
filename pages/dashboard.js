@@ -9,8 +9,8 @@ const supabase = createClient(
 
 export default function Dashboard() {
   const [registros, setRegistros] = useState([]);
-  const [puntuacion, setPuntuacion] = useState("");
-  const [deporte, setDeporte] = useState(""); // Nuevo estado para el tipo de deporte
+  const [nuevoRegistro, setNuevoRegistro] = useState({ puntuacion: "", sport_type: "", time: "", distance: "" });
+  const [registrosPendientes, setRegistrosPendientes] = useState([]); // Lista de registros antes de enviarlos
   const [user, setUser] = useState(null);
 
   // Cargar usuario y registros al montar el componente
@@ -27,31 +27,43 @@ export default function Dashboard() {
   async function fetchRegistros() {
     const { data, error } = await supabase
       .from("registros")
-      .select("id, puntuacion, day, time, distance, sport_type, user_id, users:auth.users(email)");
+      .select("id, puntuacion, sport_type, time, distance, day, user_id, users:auth.users(email)");
 
     if (error) console.error(error);
     else setRegistros(data);
   }
 
-  // Añadir un nuevo registro
-  async function addRegistro() {
+  // Añadir un registro temporal a la lista antes de enviarlo a la base de datos
+  function agregarRegistroTemporal() {
+    if (!nuevoRegistro.puntuacion || !nuevoRegistro.sport_type || !nuevoRegistro.time || !nuevoRegistro.distance) {
+      alert("Todos los campos son obligatorios.");
+      return;
+    }
+
+    setRegistrosPendientes([...registrosPendientes, { ...nuevoRegistro }]);
+    setNuevoRegistro({ puntuacion: "", sport_type: "", time: "", distance: "" }); // Limpiar inputs
+  }
+
+  // Enviar todos los registros pendientes a Supabase
+  async function enviarRegistros() {
     if (!user) return alert("Debes estar autenticado");
+    if (registrosPendientes.length === 0) return alert("No hay registros para enviar.");
 
-    const { data, error } = await supabase
-      .from("registros")
-      .insert([{ 
-        user_id: user.id, 
-        puntuacion: parseInt(puntuacion),
-        sport_type: deporte, // Guardar el tipo de deporte
-        day: new Date().toISOString().split("T")[0] // Guardar la fecha actual
-      }])
-      .select();
+    const nuevosRegistros = registrosPendientes.map(registro => ({
+      user_id: user.id,
+      puntuacion: parseInt(registro.puntuacion),
+      sport_type: registro.sport_type,
+      time: registro.time,
+      distance: registro.distance,
+      day: new Date().toISOString().split("T")[0] // Guardar fecha actual
+    }));
 
+    const { error } = await supabase.from("registros").insert(nuevosRegistros);
+    
     if (error) console.error(error);
     else {
-      setRegistros([...registros, data[0]]);
-      setPuntuacion("");
-      setDeporte("");
+      setRegistros([...registros, ...nuevosRegistros]); // Actualizar estado con nuevos datos
+      setRegistrosPendientes([]); // Limpiar registros temporales
     }
   }
 
@@ -64,30 +76,64 @@ export default function Dashboard() {
 
         {/* Formulario para añadir registros */}
         <div className="mb-6 text-center">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Puntuación</h2>
-          <div className="flex gap-2 justify-center">
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Añadir Registros</h2>
+          <div className="flex gap-2 justify-center flex-wrap">
             <input
               type="number"
-              value={puntuacion}
-              onChange={(e) => setPuntuacion(e.target.value)}
-              placeholder="Introduce puntuación"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={nuevoRegistro.puntuacion}
+              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, puntuacion: e.target.value })}
+              placeholder="Puntuación"
+              className="border border-gray-300 px-3 py-2 rounded-lg"
             />
             <input
               type="text"
-              value={deporte}
-              onChange={(e) => setDeporte(e.target.value)}
-              placeholder="Tipo de deporte (correr, nadar, caminar...)"
-              className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={nuevoRegistro.sport_type}
+              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, sport_type: e.target.value })}
+              placeholder="Deporte (correr, nadar...)"
+              className="border border-gray-300 px-3 py-2 rounded-lg"
+            />
+            <input
+              type="text"
+              value={nuevoRegistro.time}
+              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, time: e.target.value })}
+              placeholder="Tiempo (min:seg)"
+              className="border border-gray-300 px-3 py-2 rounded-lg"
+            />
+            <input
+              type="text"
+              value={nuevoRegistro.distance}
+              onChange={(e) => setNuevoRegistro({ ...nuevoRegistro, distance: e.target.value })}
+              placeholder="Distancia (km/m)"
+              className="border border-gray-300 px-3 py-2 rounded-lg"
             />
             <button
-              onClick={addRegistro}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+              onClick={agregarRegistroTemporal}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300"
             >
-              Añadir
+              Añadir a la lista
             </button>
           </div>
         </div>
+
+        {/* Registros Pendientes */}
+        {registrosPendientes.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700">Registros en espera</h3>
+            <ul className="list-disc pl-5 text-gray-700">
+              {registrosPendientes.map((registro, index) => (
+                <li key={index}>
+                  {registro.sport_type} - {registro.puntuacion} puntos, {registro.time}, {registro.distance}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={enviarRegistros}
+              className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+            >
+              Enviar todos
+            </button>
+          </div>
+        )}
 
         {/* Tabla de Registros */}
         <div className="overflow-x-auto">
